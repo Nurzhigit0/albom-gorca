@@ -53,9 +53,12 @@ button { font: inherit; color: inherit }
 
 /* section icons */
 .sections { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding-block: 6px 4px }
-.sec { background: none; border: 0; cursor: pointer; display: grid; justify-items: center; gap: 6px; padding: 10px 2px; color: var(--muted); border-radius: 14px; font-size: 12px; font-weight: 500 }
+.sec { background: none; border: 0; cursor: pointer; display: grid; justify-items: center; gap: 5px; padding: 10px 0; color: var(--muted); border-radius: 14px; font-size: 12px; font-weight: 500; min-width: 0; line-height: 1.2 }
+.sec .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block }
+@media (max-width: 400px) { .sec { font-size: 10.5px; letter-spacing: -.01em } }
 .sec svg.i { width: 26px; height: 26px }
-.sec[aria-selected="true"] { color: var(--fg); font-weight: 700 }
+.sec[aria-selected="true"] { color: var(--fg) }
+.sec[aria-selected="true"] .lbl { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px }
 .sec[aria-selected="true"] svg.i { stroke-width: 2.1 }
 .sec small { font-size: 11px; color: var(--muted); font-weight: 500 }
 
@@ -250,8 +253,8 @@ const fmtDate = d => d ? new Date(d + "T12:00").toLocaleDateString("ru-RU", { da
 function setStatus(t) { const el = $("#status"); el.textContent = t; el.hidden = !t; }
 
 function renderTabs() {
-  $("#tabs").innerHTML = PROGRAMS.map(p => `<button class="sec" role="tab" data-k="${p.key}" aria-selected="${p.key === current}">${svg(p.key)}${esc(p.name)}<small class="num">${doneCount(p)}/21</small></button>`).join("")
-    + `<button class="sec" role="tab" data-k="mine" aria-selected="${current === "mine"}">${svg("mine")}Мои места<small class="num">${tripList().length}</small></button>`;
+  $("#tabs").innerHTML = PROGRAMS.map(p => `<button class="sec" role="tab" data-k="${p.key}" aria-selected="${p.key === current}">${svg(p.key)}<span class="lbl">${esc(p.name)}</span><small class="num">${doneCount(p)}/21</small></button>`).join("")
+    + `<button class="sec" role="tab" data-k="mine" aria-selected="${current === "mine"}">${svg("mine")}<span class="lbl">Мои места</span><small class="num">${tripList().length}</small></button>`;
   const total = PROGRAMS.reduce((s, p) => s + doneCount(p), 0);
   $("#total").textContent = total; $("#totalBar").style.width = (total / 84 * 100) + "%";
 }
@@ -564,6 +567,10 @@ async function loadAll() {
   const photos = await idb.all("photos");
   for (const [id, b] of Object.entries(photos)) if (!photoURL[id]) photoURL[id] = URL.createObjectURL(b);
 }
+function setHero() {
+  const own = photoURL[HERO_PHOTO] || Object.values(photoURL)[0];
+  $("#hero").style.backgroundImage = `url(${own || "covers/gorizont-19.jpg"})`;
+}
 async function seedIfEmpty() {
   if (await idb.get("meta", "seeded")) return;
   try {
@@ -622,7 +629,7 @@ $("#settings").addEventListener("click", async e => {
     for (const [k, v] of Object.entries(data.points || {})) await idb.put("points", k, v);
     for (const [k, v] of Object.entries(data.trips || {})) await idb.put("trips", k, v);
     await idb.put("meta", "seeded", "restored");
-    await loadAll(); render(); showStorage();
+    await loadAll(); setHero(); render(); showStorage();
     msg.textContent = "Готово, данные восстановлены.";
   } catch (err) { msg.textContent = "Ошибка восстановления: " + (err.message || err); }
 });
@@ -636,7 +643,7 @@ render();
     db = assets = downloads = true;
     await seedIfEmpty();
     await loadAll();
-    $("#hero").style.backgroundImage = `url(${imgSrc(HERO_PHOTO) || "covers/gorizont-01.jpg"})`;
+    setHero();
     setStatus(""); render(); showStorage();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(showStorage);
   } catch (e) {
