@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Альбом Горца</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Альбом Горца">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap">
+<script src="jszip.min.js"></script>
+<script src="points-data.js"></script>
+<style>
+/* Layout: minimal dark (variant 4) — photo hero fading into the page with the big total, an icon row of 5 sections,
+   one program card, then a plain list of points. A full-screen sheet per point with a full-bleed photo. Deliberately dark-only. */
+:root {
+  --bg: #0b0f14; --card: #141a22; --card2: #1b222c; --line: #232b36; --fg: #e5e7eb; --muted: #94a3b8;
+  --blue: #3b82f6; --green: #10b981; --amber: #f5b544; --orange: #fb7a45; --red: #f87171;
+  --f-head: "Manrope", "Inter", system-ui, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+body { padding-bottom: env(safe-area-inset-bottom, 0px) }
+.hero { padding-top: calc(40px + env(safe-area-inset-top, 0px)) }
+body { background: var(--bg); color: var(--fg); font: 16px/1.5 var(--f-body); margin: 0; -webkit-font-smoothing: antialiased }
+.gut { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.in { max-width: 640px; margin: 0 auto }
+h1, h2, h3 { font-family: var(--f-head); margin: 0; text-wrap: balance }
+.num { font-variant-numeric: tabular-nums }
+svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none }
+button { font: inherit; color: inherit }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px }
+
+/* hero */
+.hero { position: relative; background: #1a2130 center 30% / cover no-repeat; min-height: 300px; display: grid; align-items: end; padding-block: 40px 22px }
+.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,15,20,.15) 0%, rgba(11,15,20,.55) 55%, var(--bg) 100%) }
+.hero .in { position: relative; z-index: 1; width: 100%; display: grid; gap: 6px }
+.hero .total { font: 800 clamp(52px, 15vw, 72px)/1 var(--f-head); letter-spacing: -.02em }
+.hero .total span { color: var(--muted); font-weight: 700 }
+.hero .lbl { font-size: 17px; font-weight: 500 }
+.hero .bar { margin-top: 10px; max-width: 220px }
+.status { font-size: 14px; color: var(--amber); margin: 4px 0 0 }
+.bar { height: 4px; background: rgba(255,255,255,.14); border-radius: 2px; overflow: hidden }
+.bar i { display: block; height: 100%; background: var(--fg); border-radius: 2px; transition: width .5s }
+
+/* section icons */
+.sections { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding-block: 6px 4px }
+.sec { background: none; border: 0; cursor: pointer; display: grid; justify-items: center; gap: 6px; padding: 10px 2px; color: var(--muted); border-radius: 14px; font-size: 12px; font-weight: 500 }
+.sec svg.i { width: 26px; height: 26px }
+.sec[aria-selected="true"] { color: var(--fg); font-weight: 700 }
+.sec[aria-selected="true"] svg.i { stroke-width: 2.1 }
+.sec small { font-size: 11px; color: var(--muted); font-weight: 500 }
+
+main { padding-block: 10px 56px }
+main .in { display: grid; gap: 18px }
+
+/* program card */
+.pcard { background: var(--card); border-radius: 18px; padding: 14px; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px; align-items: center }
+.pcard .pic { width: 72px; height: 72px; border-radius: 14px; background: var(--card2) center / cover; display: grid; place-items: center; color: var(--muted) }
+.pcard .pic svg.i { width: 30px; height: 30px }
+.pcard h2 { font-size: 20px; font-weight: 700 }
+.pcard .cnt { font: 800 22px var(--f-head) }
+.pcard .cnt span { color: var(--muted); font-weight: 700 }
+.pcard .bar { margin-top: 8px; background: var(--line) }
+.pcard .bar i { background: var(--green) }
+.pcard .rule { grid-column: 1 / -1; margin: 0; font-size: 14px; color: var(--muted) }
+.pcard .stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.pcard .stats div { background: var(--card2); border-radius: 12px; padding: 10px; text-align: center }
+.pcard .stats b { display: block; font: 800 20px var(--f-head) }
+.pcard .stats span { font-size: 12px; color: var(--muted) }
+
+.head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.head-row h3 { font-size: 20px; font-weight: 700 }
+.filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none }
+.pill { flex: none; border: 1px solid var(--line); background: var(--card); color: var(--fg); padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; cursor: pointer; min-height: 40px }
+.pill[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 600 }
+
+/* list */
+.list { display: grid; gap: 4px }
+.row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 6px; background: none; border: 0; border-radius: 14px; text-align: left; cursor: pointer; min-height: 76px }
+.row:hover { background: var(--card) }
+.thumb { width: 56px; height: 56px; border-radius: 12px; background: var(--card2); display: grid; place-items: center; overflow: hidden; position: relative; color: var(--muted); font: 700 16px var(--f-head) }
+.thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover }
+.row .name { font-weight: 600; font-size: 17px; display: block; line-height: 1.3 }
+.row .meta { font-size: 14px; color: var(--muted); display: block; margin-top: 2px }
+.row .tag { color: var(--blue) }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 1px }
+.lv-easy { background: var(--green) } .lv-mid { background: var(--amber) } .lv-hard { background: var(--orange) } .lv-pro { background: var(--red) } .lv-none { background: #7c8798 }
+.check { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #475569; display: grid; place-items: center }
+.check.on { background: var(--green); border-color: var(--green); color: #04130d }
+.check.on svg.i { width: 18px; height: 18px; stroke-width: 3 }
+.cnt-ph { font-size: 13px; color: var(--muted) }
+.empty { color: var(--muted); padding: 16px 6px }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; background: var(--fg); color: var(--bg); font-weight: 600; font-size: 16px; padding: 14px 20px; border-radius: 999px; cursor: pointer; min-height: 52px; text-decoration: none }
+.btn.out { background: transparent; color: var(--fg); border: 1.5px solid var(--fg) }
+.btn.wide { width: 100% }
+.btn.danger { background: transparent; color: var(--red); border: 1.5px solid #4a2a2e }
+.btn.danger.confirm { background: var(--red); color: #1a0606; border-color: var(--red) }
+.btn:disabled { opacity: .5 }
+.note { font-size: 14px; color: var(--muted); margin: 0 }
+footer { font-size: 13px; color: var(--muted); text-align: center }
+
+/* sheet */
+dialog { border: 0; padding: 0; background: var(--bg); color: var(--fg); width: min(640px, 100vw); max-width: 100vw; height: 100%; max-height: 100%; margin: 0 auto }
+@media (min-width: 700px) { dialog { height: auto; max-height: calc(100vh - 40px); margin: 20px auto; border-radius: 24px } }
+dialog::backdrop { background: rgba(0,0,0,.7) }
+.sheet { display: grid; padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)) }
+.cover { position: relative; min-height: 340px; background: linear-gradient(160deg, #1e293b, #0b0f14) center / cover no-repeat; display: grid; align-items: end }
+.cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,15,20,.35) 0%, rgba(11,15,20,0) 30%, rgba(11,15,20,.6) 70%, var(--bg) 100%) }
+.cover .ic { position: absolute; inset: 0; display: grid; place-items: center; color: #334155 }
+.cover .ic svg.i { width: 90px; height: 90px; stroke-width: 1 }
+.cover .top { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(14px, env(safe-area-inset-left, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); display: flex; justify-content: space-between; align-items: center; z-index: 2 }
+.round { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(11,15,20,.55); backdrop-filter: blur(6px); color: #fff; display: grid; place-items: center; cursor: pointer }
+.cover .eyebrow { font-size: 13px; color: #cbd5e1; background: rgba(11,15,20,.55); padding: 6px 12px; border-radius: 999px }
+.cover .title { position: relative; z-index: 1; padding: 0 max(16px, env(safe-area-inset-left, 0px)) 6px }
+.cover h2 { font-size: clamp(30px, 8vw, 38px); font-weight: 800; line-height: 1.1 }
+.cover .sub { margin-top: 6px; color: #cbd5e1; font-size: 16px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center }
+.sbody { display: grid; gap: 22px; padding-top: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.facts { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none }
+.facts li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; font-size: 16px }
+.facts li svg.i { color: var(--muted); margin-top: 1px }
+.facts small { display: block; color: var(--muted); font-size: 13px }
+.nodata { color: var(--muted); font-size: 15px; border-left: 2px solid var(--blue); padding-left: 12px }
+.actions { display: grid; gap: 10px }
+.proofs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.proof { position: relative; display: grid; justify-items: center; gap: 8px; padding: 14px 6px; border-radius: 16px; background: var(--card); cursor: pointer; text-align: center; font-size: 13px; color: var(--muted) }
+.proof input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer }
+.proof .c { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid #475569; display: grid; place-items: center; color: var(--muted) }
+.proof:has(input:checked) { color: var(--fg) }
+.proof:has(input:checked) .c { background: var(--green); border-color: var(--green); color: #04130d }
+.proof:has(input:focus-visible) { outline: 2px solid var(--blue) }
+.proof:has(input:disabled) { cursor: default }
+.sec-h { font-size: 18px; font-weight: 700 }
+label.f { display: grid; gap: 6px; font-size: 13px; color: var(--muted) }
+input[type=date], input[type=text], select, textarea { font: 16px var(--f-body); padding: 13px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--fg); width: 100% }
+textarea { min-height: 96px; resize: vertical }
+.f-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+@media (max-width: 480px) { .f-grid { grid-template-columns: 1fr } }
+.photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px }
+.ph { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--card) }
+.ph img { width: 100%; height: 100%; object-fit: cover; display: block }
+.ph button { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.7); color: #fff; border: 0; border-radius: 999px; min-width: 30px; height: 30px; cursor: pointer; font-size: 13px; padding: 0 9px }
+.ph .confirm { background: var(--red); color: #1a0606 }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none } }
+.settings { display: grid; gap: 10px; background: var(--card); border-radius: 18px; padding: 16px }
+.settings h3 { font-size: 18px; font-weight: 700 }
+.settings .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.settings .btn { min-height: 46px; font-size: 15px; padding: 10px 12px }
+.btn.confirm { background: var(--red); color: #1a0606; border-color: var(--red) }
+</style>
+</head>
+<body>
+
+<header class="hero gut" id="hero">
+  <div class="in">
+    <div class="total num"><span id="total">0</span> <span>/ 84</span></div>
+    <div class="lbl">Общий прогресс</div>
+    <div class="bar"><i id="totalBar" style="width:0"></i></div>
+    <p class="status" id="status">Подключаюсь к хранилищу…</p>
+  </div>
+</header>
+
+<nav class="gut" aria-label="Разделы"><div class="in sections" id="tabs" role="tablist"></div></nav>
+
+<main class="gut">
+  <div class="in">
+    <section id="prog"></section>
+    <div class="head-row"><h3 id="listTitle">Точки</h3></div>
+    <div class="filters" role="group" aria-label="Фильтр">
+      <button class="pill" data-f="all" aria-pressed="true">Все</button>
+      <button class="pill" data-f="easy" aria-pressed="false">Под мой уровень</button>
+      <button class="pill" data-f="done" aria-pressed="false">Пройдено</button>
+      <button class="pill" data-f="todo" aria-pressed="false">Впереди</button>
+    </div>
+    <div class="list" id="list"></div>
+    <button class="btn out wide" id="zipBtn">Скачать архив для организатора</button>
+    <p class="note" id="zipMsg" hidden></p>
+    <section class="settings" id="settings">
+      <h3>Резервная копия</h3>
+      <p class="note">Все фото и отметки хранятся только на этом телефоне. Сохраняйте копию в файл (например, в Telegram «Избранное» или Файлы) — из неё можно всё восстановить.</p>
+      <div class="two"><button class="btn" id="backupBtn">Сохранить копию</button><label class="btn out" for="restoreFile">Восстановить</label></div>
+      <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+      <p class="note" id="backupMsg"></p>
+      <p class="note" id="storageInfo"></p>
+    </section>
+    <footer>Личный альбом. Работает без интернета. Маршруты и обложки — с gorets.uz и из отчётов участников.</footer>
+  </div>
+</main>
+
+<dialog id="dlg"><div class="sheet" id="sheet"></div></dialog>
+
+<script>
+const IC = {
+  gorizont: '<path d="M2 20l7-12 4 6 3-4 6 10z"/>',
+  kaskad: '<path d="M5 3h14M7 3v9c0 2-2 3-2 5M12 3v14M17 3v9c0 2 2 3 2 5M3 21h18"/>',
+  mirazh: '<path d="M3 15c2.5-1.6 5 1.6 7.5 0s5 1.6 7.5 0 2.5-.8 3-1M3 19c2.5-1.6 5 1.6 7.5 0s5 1.6 7.5 0M7 11l5-7 5 7"/>',
+  podzemele: '<path d="M3 20c0-8 4-15 9-15s9 7 9 15M8.5 20c0-4.5 1.5-8 3.5-8s3.5 3.5 3.5 8"/>',
+  mine: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', car: '<path d="M5 16h14M6 16l1.5-5h9L18 16M6 16v3M18 16v3"/><circle cx="8" cy="16" r=".5"/><circle cx="16" cy="16" r=".5"/>',
+  route: '<path d="M3 20l6-9 4 5 3-4 5 8"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>', season: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>', arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>', back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>', send: '<path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/>', check: '<path d="M5 12.5l4.5 4.5L19 7"/>', link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>', plus: '<path d="M12 5v14M5 12h14"/>', trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'
+};
+const svg = (k, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
+
+const PROGRAMS = [
+  { key: "gorizont", name: "Горизонт", full: "21 Горизонт", rule: "Зачёт — селфи с табличкой программы на вершине.",
+    items: ["Большой Чимган","Каракуш","Кызылнура","Пик Охотничий","Чадак","Арашаны, пик Безымянный","Бабайтаг","Ходжа Гур Гур","Реваш","Сурхат","Ходжа Буз Борак","Дували Сурх","Замок","Кызылбаш","Мачетли","Чимбай","Чульбаир","Ходжа Ахча Бурун","Тавалган","Пик Амира Тимура","Пиёзак"] },
+  { key: "kaskad", name: "Каскад", full: "21 Каскад", rule: "Зачёт — селфи с табличкой программы у подножья водопада.",
+    items: ["Таваксай","Заамин","Испайсай","Обипар «Боунти»","Арашанский каскад","Крылья Ангела","Кашкасу","Чукураксу","«Мохнатый» на Аксарсае","Каптар-Кумыш","«Язык» на Аксагате","Замбат","Гулькамсай","Наволисай","Бычий нос","Сангардак","Карстовый водопад Газак","Сувтушар","Ходжа Сиддик","Девшаршара","Лашкерексай","Пальтау"] },
+  { key: "mirazh", name: "Мираж", full: "21 Мираж", rule: "Зачёт — селфи с табличкой программы. Можно снимать с перевала, не спускаясь.",
+    items: ["Тузкан","Ихнач","Алтынкуль","Канбешбулак","Каттакуль (Кырктау)","Арашанские озёра","Верхнее Сарыкамское","Ачикуль","Бадак","Между пер. Ложный и Василёк","Шовуркуль","Караканыш, Ойгаинг","«Медвежье» (Шовурсай)","Термиташ","Зекиркуль","Фазильман","Озёра Келимчика","Кичкинкуль","Урунгач","Озёра Тойпана","Озёра ледника Озёрный"] },
+  { key: "podzemele", name: "Подземелье", full: "21 Подземелье", rule: "Зачёт — селфи с табличкой программы у входа. Проходить пещеру целиком не нужно.",
+    items: ["Амира Темура Курганий","Пешагор","Грот Тешик-Таш","Киевская","Шейх, Хазрат Башир","Пальтау","Бой-Булок","Еттыкыз","Суватар","Каптархона","Сукок","Катта Эдж","Кунгурбука","Чильсим","Ходжа Зарин","Пулатхан, Зайдмана","Майдан","Гелан","Заркентская","Радужный грот Испай","Амира Темура Тарагая"] },
+];
+const INFO = window.POINTS_DATA || {};
+const LEVELS = { easy: "Лёгкий", mid: "Длинный день", hard: "Сложный", pro: "Альпинизм", none: "Нет данных" };
+const PROOFS = [["sign","Селфи с табличкой"]];
+const HERO_PHOTO = "e3fa2c32cc23cd63f7fd84f119f9ae24";
+const COVERS = new Set(["gorizont-01", "gorizont-02", "gorizont-03", "gorizont-04", "gorizont-05", "gorizont-06", "gorizont-07", "gorizont-08", "gorizont-09", "gorizont-10", "gorizont-11", "gorizont-12", "gorizont-13", "gorizont-14", "gorizont-15", "gorizont-16", "gorizont-17", "gorizont-18", "gorizont-19", "gorizont-20", "gorizont-21", "kaskad-01", "kaskad-02", "kaskad-03", "kaskad-04", "kaskad-05", "kaskad-06", "kaskad-07", "kaskad-08", "kaskad-09", "kaskad-10", "kaskad-11", "kaskad-12", "kaskad-13", "kaskad-14", "kaskad-15", "kaskad-16", "kaskad-17", "kaskad-18", "kaskad-19", "kaskad-20", "kaskad-21", "mirazh-01", "mirazh-02", "mirazh-03", "mirazh-04", "mirazh-05", "mirazh-06", "mirazh-07", "mirazh-08", "mirazh-09", "mirazh-10", "mirazh-11", "mirazh-12", "mirazh-13", "mirazh-14", "mirazh-15", "mirazh-16", "mirazh-17", "mirazh-18", "mirazh-19", "mirazh-20", "mirazh-21", "podzemele-01", "podzemele-02", "podzemele-03", "podzemele-04", "podzemele-05", "podzemele-06", "podzemele-07", "podzemele-08", "podzemele-09", "podzemele-10", "podzemele-11", "podzemele-12", "podzemele-13", "podzemele-14", "podzemele-15", "podzemele-16", "podzemele-17", "podzemele-18", "podzemele-20", "podzemele-21"]);
+const coverOf = id => COVERS.has(id) ? "covers/" + id + ".jpg" : null;
+const imgSrc = v => v && v.startsWith("covers/") ? v : (photoURL[v] || "");
+const photoURL = {};
+const TYPES = ["Вершина","Водопад","Озеро","Пещера","Перевал","Ущелье","Другое"];
+const TYPE_IC = { "Вершина": "gorizont", "Водопад": "kaskad", "Озеро": "mirazh", "Пещера": "podzemele" };
+const pid = (p, i) => p.key + "-" + String(i + 1).padStart(2, "0");
+
+let openKey = "kaskad", state = {}, trips = {}, current = "kaskad", filter = "all", sheetMode = "point", openTripId = null, openI = null;
+let db = null, assets = null, downloads = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const isDone = d => !!d && PROOFS.every(([k]) => d[k]);
+const isStarted = d => !!d && (PROOFS.some(([k]) => d[k]) || (d.photos || []).length > 0 || !!d.date);
+const prog = () => PROGRAMS.find(p => p.key === current) || PROGRAMS[1];
+const progBy = k => PROGRAMS.find(p => p.key === k);
+const info = (p, i) => (INFO[p.key] || [])[i] || {};
+const lvl = x => x.level || "none";
+const doneCount = p => p.items.filter((_, i) => isDone(state[pid(p, i)])).length;
+const fmtDate = d => d ? new Date(d + "T12:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : "";
+
+function setStatus(t) { const el = $("#status"); el.textContent = t; el.hidden = !t; }
+
+function renderTabs() {
+  $("#tabs").innerHTML = PROGRAMS.map(p => `<button class="sec" role="tab" data-k="${p.key}" aria-selected="${p.key === current}">${svg(p.key)}${esc(p.name)}<small class="num">${doneCount(p)}/21</small></button>`).join("")
+    + `<button class="sec" role="tab" data-k="mine" aria-selected="${current === "mine"}">${svg("mine")}Мои места<small class="num">${tripList().length}</small></button>`;
+  const total = PROGRAMS.reduce((s, p) => s + doneCount(p), 0);
+  $("#total").textContent = total; $("#totalBar").style.width = (total / 84 * 100) + "%";
+}
+
+function firstPhoto(p) { for (let i = 0; i < p.items.length; i++) { const ph = (state[pid(p, i)] || {}).photos; if (ph && ph.length) return ph[0]; } return null; }
+
+function renderProg() {
+  const p = prog(); let done = 0, part = 0, todo = 0;
+  p.items.forEach((_, i) => { const d = state[pid(p, i)]; if (isDone(d)) done++; else if (isStarted(d)) part++; else todo++; });
+  const ph = firstPhoto(p) || coverOf(pid(p, 0));
+  $("#prog").innerHTML = `<div class="pcard">
+    <div class="pic" ${ph ? `style="background-image:url(${esc(imgSrc(ph))})"` : ""}>${ph ? "" : svg(p.key)}</div>
+    <div><h2>${esc(p.name)}</h2><div class="cnt num">${done} <span>/ 21</span></div><div class="bar"><i style="width:${Math.min(100, done / 21 * 100)}%"></i></div></div>
+    <p class="rule">${esc(p.rule)}</p></div>`;
+  $("#listTitle").textContent = "Точки";
+}
+
+function rowHtml({ attrs, photo, fallback, name, meta, right }) {
+  return `<button class="row" ${attrs}><span class="thumb">${fallback}${photo ? `<img src="${esc(imgSrc(photo))}" alt="" loading="lazy" onerror="this.remove()">` : ""}</span>
+    <span><span class="name">${esc(name)}</span><span class="meta">${meta}</span></span>${right}</button>`;
+}
+function renderList() {
+  const p = prog();
+  const rows = p.items.map((name, i) => {
+    const d = state[pid(p, i)], x = info(p, i);
+    if (filter === "easy" && x.level !== "easy") return "";
+    if (filter === "done" && !isDone(d)) return "";
+    if (filter === "todo" && isDone(d)) return "";
+    const ph = (d && d.photos) || [];
+    return rowHtml({ attrs: `data-i="${i}"`, photo: ph[0] || coverOf(pid(p, i)), fallback: i >= 21 ? "+" : i + 1, name,
+      meta: `${x.h ? `<span class="num">${esc(x.h)}</span> · ` : ""}<span class="dot lv-${lvl(x)}"></span>${LEVELS[lvl(x)]}`,
+      right: `<span class="check ${isDone(d) ? "on" : ""}" aria-label="${isDone(d) ? "Пройдено" : "Не пройдено"}">${isDone(d) ? svg("check") : ""}</span>` });
+  }).join("");
+  $("#list").innerHTML = rows || `<p class="empty">Здесь пока пусто.</p>`;
+}
+
+function tripList() {
+  const own = Object.entries(trips).map(([id, t]) => ({ id, ...t }));
+  const fromProg = [];
+  const TYPE_OF = { gorizont: "Вершина", kaskad: "Водопад", mirazh: "Озеро", podzemele: "Пещера" };
+  PROGRAMS.forEach(p => p.items.forEach((name, i) => {
+    const d = state[pid(p, i)]; if (!isStarted(d)) return;
+    fromProg.push({ id: pid(p, i), prog: p.key, progName: p.full, i, name, type: TYPE_OF[p.key], h: info(p, i).h || "", date: d.date || "", photos: d.photos || [], cover: coverOf(pid(p, i)) });
+  }));
+  return own.concat(fromProg).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(a.name).localeCompare(String(b.name)));
+}
+function renderMine() {
+  const list = tripList();
+  const heights = list.map(t => parseInt(String(t.h || "").replace(/\D/g, ""), 10)).filter(n => n > 0);
+  const top = heights.length ? Math.max(...heights) : 0, year = String(new Date().getFullYear());
+  $("#prog").innerHTML = `<div class="pcard">
+    <div class="pic">${svg("mine")}</div>
+    <div><h2>Мои места</h2><div class="cnt num">${list.length} <span>мест</span></div></div>
+    <div class="stats"><div><b class="num">${top ? top + " м" : "—"}</b><span>самая высокая</span></div><div><b class="num">${list.filter(t => String(t.date || "").startsWith(year)).length}</b><span>в ${year}</span></div><div><b class="num">${list.reduce((s, t) => s + (t.photos || []).length, 0)}</b><span>фото</span></div></div>
+    <p class="rule">Все места, где вы были: и точки программ «21», и ваши собственные походы.</p>
+    ${db ? `<button class="btn wide" id="addTrip" style="grid-column:1/-1">${svg("plus")}Добавить место</button>` : ""}</div>`;
+  $("#listTitle").textContent = "Дневник";
+  $("#list").innerHTML = list.map(t => rowHtml({
+    attrs: t.prog ? `data-p="${t.prog}" data-i="${t.i}"` : `data-t="${esc(t.id)}"`, photo: (t.photos || [])[0] || t.cover,
+    fallback: svg(t.prog || TYPE_IC[t.type] || "mine"), name: t.name || "Без названия",
+    meta: [t.progName ? `<span class="tag">${esc(t.progName)}</span>` : esc(t.type), t.h && esc(t.h), t.date && esc(fmtDate(t.date))].filter(Boolean).join(" · "),
+    right: (t.photos || []).length ? `<span class="cnt-ph">${t.photos.length} фото</span>` : "" })).join("") || `<p class="empty">Пока пусто. Нажмите «Добавить место».</p>`;
+}
+function render() {
+  renderTabs();
+  const mine = current === "mine";
+  document.querySelector(".filters").hidden = mine;
+  $("#zipBtn").hidden = mine;
+  if (mine) renderMine(); else { renderProg(); renderList(); }
+}
+
+// ---------- sheets ----------
+function mapUrl(p, i) {
+  const x = info(p, i);
+  return "https://www.google.com/maps/search/?api=1&query=" + (x.coords ? x.coords.join(",") : encodeURIComponent(p.items[i] + " " + (x.region || "Узбекистан")));
+}
+function coverHtml(photo, iconKey, eyebrow, title, sub) {
+  return `<div class="cover" ${photo ? `style="background-image:url(${esc(imgSrc(photo))})"` : ""}>${photo ? "" : `<div class="ic">${svg(iconKey)}</div>`}
+    <div class="top"><button class="round" id="closeBtn" aria-label="Назад">${svg("back")}</button><span class="eyebrow">${esc(eyebrow)}</span></div>
+    <div class="title"><h2>${esc(title)}</h2>${sub ? `<div class="sub">${sub}</div>` : ""}</div></div>`;
+}
+function photosHtml(ph, name) {
+  return `<div class="sec-h">Фото</div>
+    ${ph.length ? `<div class="photos">${ph.map(a => `<div class="ph"><img src="${esc(imgSrc(a))}" alt="Фото: ${esc(name)}" loading="lazy">${assets ? `<button data-del="${esc(a)}" aria-label="Удалить фото">×</button>` : ""}</div>`).join("")}</div>` : `<p class="note">Фото пока нет.</p>`}
+    ${assets ? `<label class="btn wide" for="f-file">${svg("camera")}Добавить фото</label><input type="file" id="f-file" accept="image/*" multiple hidden><p class="note" id="upMsg">Фото сжимаются и хранятся на телефоне</p>` : `<p class="note">Загружать фото может только владелец альбома.</p>`}`;
+}
+function openSheet(i, key) {
+  openI = i; sheetMode = "point"; openKey = key || (current === "mine" ? openKey : current);
+  const p = progBy(openKey), d = state[pid(p, i)] || {}, x = info(p, i), name = p.items[i], ro = !db, ph = d.photos || [];
+  const sub = [x.h && `<span class="num">${esc(x.h)}</span>`, `<span><span class="dot lv-${lvl(x)}"></span>${LEVELS[lvl(x)]}</span>`, x.season && esc(x.season)].filter(Boolean).join("<span>·</span>");
+  const facts = [["pin", "Регион", x.region], ["flag", "Откуда", x.start], ["car", "Как добраться", x.access], ["route", "Маршрут", x.route], ["info", "Сложность", x.difficulty], ["season", "Советы", x.tips]].filter(f => f[2]);
+  const sparse = ["start","access","route","difficulty"].every(k => !x[k]);
+  $("#sheet").innerHTML = coverHtml(ph[0] || coverOf(pid(p, i)), p.key, `${p.full} · ${i >= 21 ? "доп." : "№" + (i + 1)}`, name, sub) + `
+    <div class="sbody">
+      ${facts.length ? `<ul class="facts">${facts.map(([ic, k, v]) => `<li>${svg(ic)}<span><small>${k}</small>${esc(v)}</span></li>`).join("")}</ul>` : ""}
+      ${!ph.length && coverOf(pid(p, i)) ? `<p class="note">Обложка — фото с сайта gorets.uz. Ваше фото заменит её.</p>` : ""}
+      ${sparse ? `<p class="nodata">Подробного маршрута в открытых источниках нет. Спросите в чате «Горца»: t.me/gorets_uzb</p>` : ""}
+      <div class="actions"><a class="btn" href="${mapUrl(p, i)}" target="_blank" rel="noopener">${x.coords ? "Точка на карте" : "Открыть на карте"} ${svg("arrow")}</a>
+        ${x.src ? `<a class="btn out" href="${esc(x.src)}" target="_blank" rel="noopener">Источник</a>` : ""}</div>
+      <div class="proofs">
+        <label class="proof"><input type="checkbox" data-k="sign" ${d.sign ? "checked" : ""} ${ro ? "disabled" : ""}><span class="c">${svg("camera")}</span>Селфи с табличкой</label>
+        <label class="proof"><input type="checkbox" data-k="sent" ${d.sent ? "checked" : ""} ${ro ? "disabled" : ""}><span class="c">${svg("send")}</span>Отправлено</label>
+        <label class="proof"><input type="checkbox" data-k="accepted" ${d.accepted ? "checked" : ""} ${ro ? "disabled" : ""}><span class="c">${svg("check")}</span>Засчитано</label>
+      </div>
+      <label class="f">Дата похода<input type="date" id="f-date" value="${esc(d.date)}" ${ro ? "disabled" : ""}></label>
+      <label class="f">Заметка<textarea id="f-note" ${ro ? "disabled" : ""}>${esc(d.note)}</textarea></label>
+      ${photosHtml(ph, name)}
+    </div>`;
+  if (!$("#dlg").open) $("#dlg").showModal();
+}
+function openTrip(id) {
+  sheetMode = "trip"; openTripId = id;
+  const t = trips[id] || {}, ph = t.photos || [], ro = !db;
+  const sub = [t.type && esc(t.type), t.h && `<span class="num">${esc(t.h)}</span>`, t.date && esc(fmtDate(t.date))].filter(Boolean).join("<span>·</span>");
+  $("#sheet").innerHTML = coverHtml(ph[0], TYPE_IC[t.type] || "mine", "Мои места", t.name || "Без названия", sub) + `
+    <div class="sbody">
+      <label class="f">Название<input type="text" id="t-name" value="${esc(t.name)}" ${ro ? "disabled" : ""}></label>
+      <div class="f-grid">
+        <label class="f">Тип<select id="t-type" ${ro ? "disabled" : ""}>${TYPES.map(x => `<option ${x === t.type ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+        <label class="f">Высота<input type="text" id="t-h" placeholder="например, 2025 м" value="${esc(t.h)}" ${ro ? "disabled" : ""}></label>
+        <label class="f">Дата<input type="date" id="t-date" value="${esc(t.date)}" ${ro ? "disabled" : ""}></label>
+        <label class="f">Регион<input type="text" id="t-region" value="${esc(t.region)}" ${ro ? "disabled" : ""}></label>
+      </div>
+      <label class="f">Воспоминания: с кем, как шли, что запомнилось<textarea id="t-note" ${ro ? "disabled" : ""}>${esc(t.note)}</textarea></label>
+      ${photosHtml(ph, t.name)}
+      ${db ? `<button class="btn danger wide" id="delTrip">${svg("trash")}Удалить место</button>` : ""}
+    </div>`;
+  if (!$("#dlg").open) $("#dlg").showModal();
+}
+
+async function save(id, patch) {
+  if (!db) return;
+  const next = Object.assign({}, state[id] || {}, patch);
+  state[id] = next; render();
+  try { await idb.put("points", id, next); setStatus(""); }
+  catch (e) { setStatus("Не удалось сохранить: " + (e.code || e.message) + ". Проверьте сеть и повторите."); }
+}
+async function saveTrip(id, patch) {
+  if (!db) return;
+  const next = Object.assign({}, trips[id] || {}, patch);
+  trips[id] = next; render();
+  try { await idb.put("trips", id, next); setStatus(""); }
+  catch (e) { setStatus("Не удалось сохранить: " + (e.code || e.message) + ". Проверьте сеть и повторите."); }
+}
+async function uploadFiles(files, existing) {
+  const msg = $("#upMsg"), ids = [...existing];
+  for (let k = 0; k < files.length; k++) {
+    msg.textContent = `Загружаю ${k + 1} из ${files.length}…`;
+    try { ids.push(await addPhoto(files[k])); }
+    catch (err) { msg.textContent = "Не удалось добавить фото: " + (err.message || err) + ". Возможно, на телефоне мало места."; return null; }
+  }
+  return ids;
+}
+
+$("#sheet").addEventListener("change", async e => {
+  const t = e.target;
+  if (sheetMode === "trip") {
+    const id = openTripId, map = { "t-name": "name", "t-type": "type", "t-h": "h", "t-date": "date", "t-region": "region", "t-note": "note" };
+    if (map[t.id]) return saveTrip(id, { [map[t.id]]: t.value });
+    if (t.id === "f-file") { const ids = await uploadFiles([...t.files], (trips[id] || {}).photos || []); if (ids) { await saveTrip(id, { photos: ids }); openTrip(id); } }
+    return;
+  }
+  const id = pid(progBy(openKey), openI);
+  if (t.matches("input[type=checkbox]")) save(id, { [t.dataset.k]: t.checked });
+  else if (t.id === "f-date") save(id, { date: t.value });
+  else if (t.id === "f-note") save(id, { note: t.value });
+  else if (t.id === "f-file") { const ids = await uploadFiles([...t.files], (state[id] || {}).photos || []); if (ids) { await save(id, { photos: ids }); openSheet(openI, openKey); } }
+});
+$("#sheet").addEventListener("click", async e => {
+  if (e.target.closest("#closeBtn")) { $("#dlg").close(); return; }
+  if (sheetMode === "trip") {
+    const id = openTripId, dt = e.target.closest("#delTrip");
+    if (dt) {
+      if (!dt.classList.contains("confirm")) { dt.classList.add("confirm"); dt.textContent = "Точно удалить? Нажмите ещё раз"; return; }
+      const ph = (trips[id] || {}).photos || [];
+      delete trips[id]; $("#dlg").close(); render();
+      try { await idb.del("trips", id); for (const a of ph) await removePhoto(a); } catch (err) { setStatus("Не удалось удалить: " + (err.code || err.message)); }
+      return;
+    }
+  }
+  const del = e.target.closest("[data-del]"); if (!del) return;
+  if (!del.classList.contains("confirm")) { del.classList.add("confirm"); del.textContent = "Удалить?"; return; }
+  const aid = del.dataset.del;
+  if (sheetMode === "trip") { await saveTrip(openTripId, { photos: ((trips[openTripId] || {}).photos || []).filter(x => x !== aid) }); await removePhoto(aid); openTrip(openTripId); return; }
+  const id = pid(progBy(openKey), openI);
+  await save(id, { photos: ((state[id] || {}).photos || []).filter(x => x !== aid) });
+  await removePhoto(aid);
+  openSheet(openI, openKey);
+});
+$("#dlg").addEventListener("click", e => { if (e.target === $("#dlg")) $("#dlg").close(); });
+$("#tabs").addEventListener("click", e => { const b = e.target.closest(".sec"); if (!b) return; current = b.dataset.k; try { localStorage.setItem("prog", current); } catch (_) {} render(); });
+document.querySelector(".filters").addEventListener("click", e => {
+  const b = e.target.closest("[data-f]"); if (!b) return; filter = b.dataset.f;
+  document.querySelectorAll("[data-f]").forEach(x => x.setAttribute("aria-pressed", x === b)); renderList();
+});
+$("#list").addEventListener("click", e => { const r = e.target.closest(".row"); if (!r) return; if (r.dataset.t) openTrip(r.dataset.t); else openSheet(Number(r.dataset.i), r.dataset.p); });
+$("#prog").addEventListener("click", async e => {
+  if (!e.target.closest("#addTrip")) return;
+  const id = "t" + Date.now().toString(36);
+  await saveTrip(id, { name: "Новое место", type: "Вершина", h: "", date: new Date().toISOString().slice(0, 10), region: "", note: "", photos: [] });
+  openTrip(id);
+});
+
+// ---------- archive ----------
+$("#zipBtn").addEventListener("click", async () => {
+  const msg = $("#zipMsg"); msg.hidden = false;
+  if (!window.JSZip) { msg.textContent = "Не загрузилась библиотека архива. Перезапустите приложение."; return; }
+  const p = prog(), zip = new JSZip(), lines = [p.full + " — доказательства", ""];
+  let n = 0; $("#zipBtn").disabled = true;
+  try {
+    for (let i = 0; i < p.items.length; i++) {
+      const d = state[pid(p, i)], photos = (d && d.photos) || [];
+      if (!photos.length) continue;
+      const folder = String(i + 1).padStart(2, "0") + " " + p.items[i].replace(/[\\/:*?"<>|«»]/g, "");
+      lines.push(folder + (d.date ? " — " + d.date : "") + " — фото: " + photos.length);
+      for (let k = 0; k < photos.length; k++) {
+        msg.textContent = `Собираю архив: ${folder}, фото ${k + 1}…`;
+        const b = await idb.get("photos", photos[k]); if (!b) continue;
+        const ext = (b.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+        zip.file(`${folder}/${k + 1}.${ext}`, b); n++;
+      }
+    }
+    if (!n) { msg.textContent = "В этой программе пока нет фото."; return; }
+    zip.file("список.txt", lines.join("\n"));
+    await saveFile(p.full.replace(" ", "-") + "-доказательства.zip", await zip.generateAsync({ type: "blob" }), "application/zip");
+    msg.textContent = `Архив сохранён: ${n} фото.`;
+  } catch (e) {
+    msg.textContent = e && e.code === "declined" ? "Скачивание отменено." : "Не удалось собрать архив: " + ((e && (e.code || e.message)) || "ошибка");
+  } finally { $("#zipBtn").disabled = false; }
+});
+
+// ---------- storage on the phone (IndexedDB) ----------
+const idb = {
+  db: null,
+  opening: null,
+  open() {
+    if (this.db) return Promise.resolve();
+    if (this.opening) return this.opening;
+    this.opening = new Promise((res, rej) => {
+      const r = indexedDB.open("albom-gorca", 1);
+      r.onupgradeneeded = () => { const d = r.result; ["points", "trips", "photos", "meta"].forEach(n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n); }); };
+      r.onsuccess = () => {
+        const d = r.result;
+        d.onclose = () => { if (this.db === d) this.db = null; };          // iOS Safari may close the connection on its own
+        d.onversionchange = () => { d.close(); if (this.db === d) this.db = null; };
+        this.db = d; res();
+      };
+      r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error("база занята другой вкладкой — закройте её"));
+    }).finally(() => { this.opening = null; });
+    return this.opening;
+  },
+  async run(store, mode, fn, attempt = 0) {
+    await this.open();
+    try {
+      return await new Promise((res, rej) => {
+        const t = this.db.transaction(store, mode), q = fn(t.objectStore(store));
+        t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error("операция отменена"));
+      });
+    } catch (e) {
+      const closed = e && (e.name === "InvalidStateError" || /clos/i.test(e.message || "") || e.name === "UnknownError");
+      if (closed && attempt < 3) { this.db = null; await new Promise(r => setTimeout(r, 150 * (attempt + 1))); return this.run(store, mode, fn, attempt + 1); }
+      throw e;
+    }
+  },
+  req(store, mode, fn) { return this.run(store, mode, fn); },
+  get(s, k) { return this.req(s, "readonly", st => st.get(k)); },
+  put(s, k, v) { return this.req(s, "readwrite", st => st.put(v, k)); },
+  del(s, k) { return this.req(s, "readwrite", st => st.delete(k)); },
+  clear(s) { return this.req(s, "readwrite", st => st.clear()); },
+  async all(s) {
+    const keys = await this.run(s, "readonly", st => st.getAllKeys());
+    const vals = await this.run(s, "readonly", st => st.getAll());
+    const out = {}; (keys || []).forEach((k, i) => { out[k] = vals[i]; }); return out;
+  },
+  putMany(s, entries) { return this.run(s, "readwrite", st => { entries.forEach(([k, v]) => st.put(v, k)); }); }
+};
+const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, "0")).join("");
+async function shrink(file) {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(b => r(b || file), "image/jpeg", 0.82));
+  } catch (_) { return file; }
+}
+async function addPhoto(file) {
+  const blob = await shrink(file), id = newId();
+  await idb.put("photos", id, blob);
+  photoURL[id] = URL.createObjectURL(blob);
+  return id;
+}
+async function removePhoto(id) {
+  try { await idb.del("photos", id); } catch (_) {}
+  if (photoURL[id]) { URL.revokeObjectURL(photoURL[id]); delete photoURL[id]; }
+}
+async function saveFile(name, blob, type) {
+  const file = new File([blob], name, { type });
+  if (navigator.canShare && navigator.canShare({ files: [file] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)) {
+    try { await navigator.share({ files: [file], title: name }); return; }
+    catch (e) { if (e && e.name === "AbortError") throw { code: "declined" }; }
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+const toDataURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+async function loadAll() {
+  state = await idb.all("points"); trips = await idb.all("trips");
+  const photos = await idb.all("photos");
+  for (const [id, b] of Object.entries(photos)) if (!photoURL[id]) photoURL[id] = URL.createObjectURL(b);
+}
+async function seedIfEmpty() {
+  if (await idb.get("meta", "seeded")) return;
+  try {
+    const seed = await fetch("seed.json").then(r => r.json());
+    const ids = new Set();
+    Object.values(seed.points).concat(Object.values(seed.trips)).forEach(x => (x.photos || []).forEach(p => ids.add(p)));
+    const blobs = [];
+    for (const id of ids) { const r = await fetch("my/" + id + ".jpg"); if (r.ok) blobs.push([id, await r.blob()]); }
+    await idb.putMany("photos", blobs);
+    await idb.putMany("points", Object.entries(seed.points));
+    await idb.putMany("trips", Object.entries(seed.trips));
+    await idb.put("meta", "seeded", new Date().toISOString());
+  } catch (e) { setStatus("Не удалось загрузить начальные данные: " + (e.message || e)); }
+}
+async function showStorage() {
+  try {
+    const n = Object.keys(photoURL).length;
+    const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
+    const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
+    const last = await idb.get("meta", "lastBackup");
+    $("#storageInfo").textContent = `Ваших фото: ${n}` + (est ? ` · занято ≈ ${Math.round(est.usage / 1048576)} МБ` : "")
+      + (persisted ? " · защищено от очистки" : "") + (last ? ` · последняя копия ${fmtDate(last.slice(0, 10))}` : " · копию ещё не делали");
+  } catch (_) {}
+}
+$("#backupBtn").addEventListener("click", async () => {
+  const msg = $("#backupMsg"); msg.textContent = "Собираю копию…";
+  try {
+    const photos = await idb.all("photos");
+    const out = { app: "albom-gorca", version: 1, created: new Date().toISOString(), points: state, trips, photos: {} };
+    for (const [id, b] of Object.entries(photos)) out.photos[id] = await toDataURL(b);
+    const name = "albom-gorca-" + new Date().toISOString().slice(0, 10) + ".json";
+    await saveFile(name, new Blob([JSON.stringify(out)], { type: "application/json" }), "application/json");
+    await idb.put("meta", "lastBackup", new Date().toISOString());
+    msg.textContent = `Копия готова: ${Object.keys(out.photos).length} фото. Сохраните файл в надёжное место.`;
+    showStorage();
+  } catch (e) { msg.textContent = e && e.code === "declined" ? "Отменено." : "Не удалось сохранить копию: " + ((e && e.message) || e); }
+});
+let pendingRestore = null;
+$("#restoreFile").addEventListener("change", async e => {
+  const f = e.target.files[0], msg = $("#backupMsg"); e.target.value = "";
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (data.app !== "albom-gorca") throw new Error("это не файл копии альбома");
+    pendingRestore = data;
+    msg.innerHTML = `В копии: ${Object.keys(data.points || {}).length} точек, ${Object.keys(data.trips || {}).length} мест, ${Object.keys(data.photos || {}).length} фото. Текущие данные будут заменены. <button class="btn confirm" id="restoreGo" style="margin-top:8px;width:100%">Заменить данные</button>`;
+  } catch (err) { msg.textContent = "Не удалось прочитать файл: " + (err.message || err); }
+});
+$("#settings").addEventListener("click", async e => {
+  if (!e.target.closest("#restoreGo") || !pendingRestore) return;
+  const data = pendingRestore, msg = $("#backupMsg"); pendingRestore = null; msg.textContent = "Восстанавливаю…";
+  try {
+    for (const s of ["points", "trips", "photos"]) await idb.clear(s);
+    Object.values(photoURL).forEach(u => URL.revokeObjectURL(u)); for (const k in photoURL) delete photoURL[k];
+    for (const [id, du] of Object.entries(data.photos || {})) await idb.put("photos", id, await fetch(du).then(r => r.blob()));
+    for (const [k, v] of Object.entries(data.points || {})) await idb.put("points", k, v);
+    for (const [k, v] of Object.entries(data.trips || {})) await idb.put("trips", k, v);
+    await idb.put("meta", "seeded", "restored");
+    await loadAll(); render(); showStorage();
+    msg.textContent = "Готово, данные восстановлены.";
+  } catch (err) { msg.textContent = "Ошибка восстановления: " + (err.message || err); }
+});
+
+// ---------- boot ----------
+try { const s = localStorage.getItem("prog"); if (s && (s === "mine" || PROGRAMS.some(p => p.key === s))) current = s; } catch (_) {}
+render();
+(async () => {
+  try {
+    await idb.open();
+    db = assets = downloads = true;
+    await seedIfEmpty();
+    await loadAll();
+    $("#hero").style.backgroundImage = `url(${imgSrc(HERO_PHOTO) || "covers/gorizont-01.jpg"})`;
+    setStatus(""); render(); showStorage();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(showStorage);
+  } catch (e) {
+    setStatus("Не удалось открыть хранилище (" + (e.message || e) + "). Закройте и откройте приложение ещё раз. Если не поможет — проверьте, что Safari не в режиме «Частный доступ».");
+  }
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>
