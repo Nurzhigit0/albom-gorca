@@ -1,5 +1,5 @@
 // Офлайн-кэш «Альбома Горца». При изменении файлов увеличьте VERSION.
-const VERSION = "v4";
+const VERSION = "v5";
 const CORE = [
 "./",
 "index.html",
